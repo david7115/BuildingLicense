@@ -1,40 +1,43 @@
 import pandas as pd
-import json
-import glob
 import os
 
-def load_and_convert():
-    raw_dir = os.path.join(os.path.dirname(__file__), '..', 'data', 'raw')
-    raw_dir = os.path.abspath(raw_dir)
+output_dir = os.path.join("data", "raw")
+os.makedirs(output_dir, exist_ok=True)
 
-    bdong_path = glob.glob(os.path.join(raw_dir, "KIKcd_B*.xlsx"))[0]
-    hdong_path = glob.glob(os.path.join(raw_dir, "KIKcd_H*.xlsx"))[0]
-    mix_path = glob.glob(os.path.join(raw_dir, "KIKmix*.xlsx"))[0]
+# 1. 법정동 코드 샘플
+df_bdong = pd.DataFrame({
+    '법정동코드': ['1111010100', '1111010200'],
+    '시도명': ['서울특별시', '서울특별시'],
+    '시군구명': ['종로구', '종로구'],
+    '읍면동명': ['청운효자동', '사직동'],
+    '동리명': ['청운동', '사직동'],
+    '생성일자': ['20220101', '20220101'],
+    '말소일자': [None, None]
+})
+df_bdong.to_excel(os.path.join(output_dir, 'KIKcd_B_sample.xlsx'), index=False)
 
-    bdong = pd.read_excel(bdong_path, dtype=str)
-    hdong = pd.read_excel(hdong_path, dtype=str)
-    mix = pd.read_excel(mix_path, dtype=str)
+# 2. 행정동 코드 샘플
+df_hdong = pd.DataFrame({
+    '행정동코드': ['1101053', '1101054'],
+    '시도명': ['서울특별시', '서울특별시'],
+    '시군구명': ['종로구', '종로구'],
+    '읍면동명': ['청운효자동', '사직동'],
+    '생성일자': ['20220101', '20220101'],
+    '말소일자': [None, None]
+})
+df_hdong.to_excel(os.path.join(output_dir, 'KIKcd_H_sample.xlsx'), index=False)
 
-    bdong['시도코드'] = bdong['법정동코드'].str[:2]
-    bdong['시군구코드'] = bdong['법정동코드'].str[:5]
-    bdong = bdong[['시도코드','시도명','시군구코드','시군구명',
-                   '법정동코드','읍면동명','동리명','생성일자','말소일자']]
+# 3. 혼합코드 (행정동 ↔ 법정동 매핑)
+df_mix = pd.DataFrame({
+    '행정동코드': ['1101053', '1101054'],
+    '시도명': ['서울특별시', '서울특별시'],
+    '시군구명': ['종로구', '종로구'],
+    '읍면동명': ['청운효자동', '사직동'],
+    '법정동코드': ['1111010100', '1111010200'],
+    '동리명': ['청운동', '사직동'],
+    '생성일자': ['20220101', '20220101'],
+    '말소일자': [None, None]
+})
+df_mix.to_excel(os.path.join(output_dir, 'KIKmix_sample.xlsx'), index=False)
 
-    hdong['시도코드'] = hdong['행정동코드'].str[:2]
-    hdong['시군구코드'] = hdong['행정동코드'].str[:5]
-    hdong = hdong[['시도코드','시도명','시군구코드','시군구명',
-                   '행정동코드','읍면동명','생성일자','말소일자']]
-
-    mix['시도코드'] = mix['행정동코드'].str[:2]
-    mix['시군구코드'] = mix['행정동코드'].str[:5]
-    mix = mix[['시도코드','시도명','시군구코드','시군구명',
-               '행정동코드','읍면동명','법정동코드','동리명','생성일자','말소일자']]
-
-    bdong.to_json(os.path.join(raw_dir, "code_bdong.json"), force_ascii=False, indent=2)
-    hdong.to_json(os.path.join(raw_dir, "code_hdong.json"), force_ascii=False, indent=2)
-    mix.to_json(os.path.join(raw_dir, "code_hdong_bdong.json"), force_ascii=False, indent=2)
-
-    print("✅ JSON 파일 저장 완료")
-
-if __name__ == "__main__":
-    load_and_convert()
+print("✅ 샘플 파일 3개가 생성되었습니다.")
