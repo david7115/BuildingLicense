@@ -1,50 +1,40 @@
-import streamlit as st
 import pandas as pd
-from PublicDataReader import BuildingLicense
+import json
+import glob
+import os
 
-# ✅ 디코딩된 서비스 키 적용
-SERVICE_KEY = "ZarTYb88UP8FCrJp2W+Wxiu4ffdIgJluH8tBA8FKMt553Y+PuBf/2Cxi61wxKU/GfGdeINYC8KuofirJkyf0rA=="
+def load_and_convert():
+    raw_dir = os.path.join(os.path.dirname(__file__), '..', 'data', 'raw')
+    raw_dir = os.path.abspath(raw_dir)
 
-# API 인스턴스 생성
-api = BuildingLicense(SERVICE_KEY)
+    bdong_path = glob.glob(os.path.join(raw_dir, "KIKcd_B*.xlsx"))[0]
+    hdong_path = glob.glob(os.path.join(raw_dir, "KIKcd_H*.xlsx"))[0]
+    mix_path = glob.glob(os.path.join(raw_dir, "KIKmix*.xlsx"))[0]
 
-# Streamlit 기본 설정
-st.set_page_config(page_title="건축허가정보 조회", layout="wide")
-st.title("🏗️ 건축허가정보 서비스 (국토교통부 건축HUB)")
+    bdong = pd.read_excel(bdong_path, dtype=str)
+    hdong = pd.read_excel(hdong_path, dtype=str)
+    mix = pd.read_excel(mix_path, dtype=str)
 
-# 🔍 사용자 입력
-with st.sidebar:
-    st.header("🔧 조회조건")
-    service_type = st.selectbox("서비스유형", ["기본개요", "동별개요", "층별개요", "호별개요", "대수선", "주차장"])
-    sigungu_code = st.text_input("시군구코드 (예: 41135)", value="41135")
-    bdong_code = st.text_input("법정동코드 (예: 11000)", value="11000")
-    search = st.button("🔍 조회 실행")
+    bdong['시도코드'] = bdong['법정동코드'].str[:2]
+    bdong['시군구코드'] = bdong['법정동코드'].str[:5]
+    bdong = bdong[['시도코드','시도명','시군구코드','시군구명',
+                   '법정동코드','읍면동명','동리명','생성일자','말소일자']]
 
-# 🚀 데이터 조회
-if search:
-    with st.spinner("📡 건축정보를 조회 중입니다..."):
-        try:
-            df = api.get_data(
-                service_type=service_type,
-                sigungu_code=sigungu_code,
-                bdong_code=bdong_code,
-                plat_code=None,
-                bun=None,
-                ji=None,
-                translate=True,
-                verbose=False
-            )
+    hdong['시도코드'] = hdong['행정동코드'].str[:2]
+    hdong['시군구코드'] = hdong['행정동코드'].str[:5]
+    hdong = hdong[['시도코드','시도명','시군구코드','시군구명',
+                   '행정동코드','읍면동명','생성일자','말소일자']]
 
-            if not df.empty:
-                st.success(f"✅ {len(df)}건의 결과를 조회했습니다.")
-                st.dataframe(df, use_container_width=True)
+    mix['시도코드'] = mix['행정동코드'].str[:2]
+    mix['시군구코드'] = mix['행정동코드'].str[:5]
+    mix = mix[['시도코드','시도명','시군구코드','시군구명',
+               '행정동코드','읍면동명','법정동코드','동리명','생성일자','말소일자']]
 
-                # 📥 CSV 다운로드
-                csv = df.to_csv(index=False).encode('utf-8-sig')
-                st.download_button("📁 CSV 다운로드", csv, "building_license.csv", "text/csv")
-            else:
-                st.warning("📭 해당 조건에 맞는 건축허가 데이터가 없습니다.")
+    bdong.to_json(os.path.join(raw_dir, "code_bdong.json"), force_ascii=False, indent=2)
+    hdong.to_json(os.path.join(raw_dir, "code_hdong.json"), force_ascii=False, indent=2)
+    mix.to_json(os.path.join(raw_dir, "code_hdong_bdong.json"), force_ascii=False, indent=2)
 
-        except Exception as e:
-            st.error(f"🚨 API 호출 실패: {e}")
+    print("✅ JSON 파일 저장 완료")
 
+if __name__ == "__main__":
+    load_and_convert()
